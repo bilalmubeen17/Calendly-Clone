@@ -3,11 +3,11 @@ import { redirect } from "next/navigation";
 import { getUserById } from "@/lib/db";
 import CopyLinkButton from "./copy-link-button";
 
-export default function Dashboard() {
+export default async function Dashboard() {
   const uid = cookies().get("schedlink_uid")?.value;
   if (!uid) redirect("/");
 
-  const user = getUserById(uid);
+  const user = await getUserById(uid);
   if (!user) redirect("/");
 
   const bookingUrl = `${process.env.APP_URL}/book/${user.slug}`;

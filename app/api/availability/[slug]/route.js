@@ -4,7 +4,7 @@ import { getUserBySlug } from "@/lib/db";
 import { getAvailableSlots } from "@/lib/availability";
 
 export async function GET(request, { params }) {
-  const user = getUserBySlug(params.slug);
+  const user = await getUserBySlug(params.slug);
   if (!user) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }

@@ -13,7 +13,7 @@ export async function POST(request) {
     return NextResponse.json({ error: "missing_fields" }, { status: 400 });
   }
 
-  const user = getUserBySlug(slug);
+  const user = await getUserBySlug(slug);
   if (!user) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
@@ -50,7 +50,7 @@ export async function POST(request) {
   });
 
   const bookingId = nanoid(12);
-  createBooking({
+  await createBooking({
     id: bookingId,
     user_id: user.id,
     google_event_id: event.id,

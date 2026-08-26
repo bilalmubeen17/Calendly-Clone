@@ -58,6 +58,7 @@ cp .env.example .env
 Fill in `.env`:
 
 ```
+DATABASE_URL=...               # Supabase project → Connect → Connection pooling URI (port 6543)
 GOOGLE_CLIENT_ID=...           # from step 1
 GOOGLE_CLIENT_SECRET=...       # from step 1
 GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback
@@ -87,8 +88,9 @@ bookable.
 
 ## Data storage
 
-Everything is stored in a single SQLite file, `schedlink.db`, created
-automatically on first run — no separate database server needed. Two tables:
+Everything is stored in Supabase Postgres, reached via `DATABASE_URL` — the
+tables (`CREATE TABLE IF NOT EXISTS`) are created automatically on first
+query. Two tables:
 
 - `users` — one row per business owner: their slug, refresh token, timezone,
   bookable hour range, meeting length.
@@ -96,10 +98,11 @@ automatically on first run — no separate database server needed. Two tables:
   created.
 
 To change someone's bookable hours, meeting length, or timezone right now,
-edit their row directly:
+edit their row directly (Supabase dashboard → Table Editor, or the SQL
+editor):
 
-```bash
-sqlite3 schedlink.db "UPDATE users SET day_start_hour=9, day_end_hour=17, meeting_duration_minutes=45 WHERE slug='your-name';"
+```sql
+UPDATE users SET day_start_hour=9, day_end_hour=17, meeting_duration_minutes=45 WHERE slug='your-name';
 ```
 
 (A settings form on `/dashboard` is a natural next step — the fields already
@@ -112,10 +115,6 @@ A few things worth doing before this is public-facing for real businesses:
 - **Verify your OAuth app with Google** (*OAuth consent screen → Publish
   app*) — otherwise only the test users you explicitly listed can connect,
   and everyone else sees an "unverified app" warning.
-- **Swap SQLite for Postgres** if more than one business will use this, or
-  if you'll run more than one server instance (SQLite is a single file and
-  doesn't like concurrent writers across machines). The query shapes in
-  `lib/db.js` are simple enough to port directly.
 - **Sign the session cookie** — right now `schedlink_uid` is just the raw
   user id. Fine for a first deploy behind HTTPS, but sign or encrypt it
   (e.g. with `SESSION_SECRET`) before this handles real customer data.
@@ -138,7 +137,7 @@ app/
   api/availability/[slug]/route.js   returns open slots for a business
   api/book/route.js               creates a booking on Google Calendar
 lib/
-  db.js                           SQLite schema + queries
+  db.js                           Postgres (Supabase) schema + queries
   google.js                       OAuth client + Calendar API client
   availability.js                 freebusy fetch + slot-slicing logic
 ```
