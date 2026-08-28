@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getUserById } from "@/lib/db";
 import CopyLinkButton from "./copy-link-button";
@@ -10,7 +10,8 @@ export default async function Dashboard() {
   const user = await getUserById(uid);
   if (!user) redirect("/");
 
-  const bookingUrl = `${process.env.APP_URL}/book/${user.slug}`;
+  const origin = `${headers().get("x-forwarded-proto") || "http"}://${headers().get("host")}`;
+  const bookingUrl = `${origin}/book/${user.slug}`;
 
   return (
     <main className="shell">

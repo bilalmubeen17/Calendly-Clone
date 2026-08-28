@@ -16,9 +16,10 @@ function slugify(name, fallbackSeed) {
 }
 
 export async function GET(request) {
+  const origin = new URL(request.url).origin;
   const code = new URL(request.url).searchParams.get("code");
   if (!code) {
-    return NextResponse.redirect(new URL("/?error=missing_code", process.env.APP_URL));
+    return NextResponse.redirect(new URL("/?error=missing_code", origin));
   }
 
   const client = getOAuthClient();
@@ -29,7 +30,7 @@ export async function GET(request) {
     // when prompt=consent forces re-issue, which getAuthUrl already sets).
     // If this still happens, the account likely has a prior grant to revoke
     // at https://myaccount.google.com/permissions before reconnecting.
-    return NextResponse.redirect(new URL("/?error=no_refresh_token", process.env.APP_URL));
+    return NextResponse.redirect(new URL("/?error=no_refresh_token", origin));
   }
 
   client.setCredentials(tokens);
@@ -54,7 +55,7 @@ export async function GET(request) {
     timezone: calMeta.timeZone || "America/Chicago",
   });
 
-  const res = NextResponse.redirect(new URL("/dashboard", process.env.APP_URL));
+  const res = NextResponse.redirect(new URL("/dashboard", origin));
   // Minimal session: just the user id, signed would be better for production
   // (see README "Hardening ideas"). Fine for getting this running.
   res.cookies.set("schedlink_uid", user.id, {
