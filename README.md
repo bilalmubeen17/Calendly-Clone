@@ -97,16 +97,8 @@ query. Two tables:
 - `bookings` — one row per confirmed booking, plus the Google event ID it
   created.
 
-To change someone's bookable hours, meeting length, or timezone right now,
-edit their row directly (Supabase dashboard → Table Editor, or the SQL
-editor):
-
-```sql
-UPDATE users SET day_start_hour=9, day_end_hour=17, meeting_duration_minutes=45 WHERE slug='your-name';
-```
-
-(A settings form on `/dashboard` is a natural next step — the fields already
-exist in the schema, it just needs a form + a `PATCH` route.)
+Bookable hours, meeting length, buffer time, and timezone are all editable
+from the Settings card on `/dashboard` (backed by `PATCH /api/settings`).
 
 ## Going to production
 
