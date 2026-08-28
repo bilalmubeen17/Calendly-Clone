@@ -46,7 +46,7 @@ export async function GET(request) {
   const id = nanoid(12);
   const slug = slugify(profile.name, id.slice(0, 6));
 
-  const user = upsertUser({
+  const user = await upsertUser({
     id,
     slug,
     email: profile.email,
