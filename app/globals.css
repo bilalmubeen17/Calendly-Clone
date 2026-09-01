@@ -41,6 +41,24 @@ button {
   font-family: inherit;
 }
 
+.site-header {
+  background: var(--teal-dark);
+}
+
+.site-header .brand {
+  display: flex;
+  align-items: center;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 14px 24px;
+}
+
+.site-header .brand img {
+  display: block;
+  height: 32px;
+  width: auto;
+}
+
 .shell {
   max-width: 760px;
   margin: 0 auto;

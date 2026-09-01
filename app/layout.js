@@ -1,3 +1,5 @@
+import Image from "next/image";
+import Link from "next/link";
 import "./globals.css";
 
 export const metadata = {
@@ -8,7 +10,20 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <header className="site-header">
+          <Link href="/" className="brand">
+            <Image
+              src="/simplibill-logo.png"
+              alt="SimpliBill"
+              width={220}
+              height={66}
+              priority
+            />
+          </Link>
+        </header>
+        {children}
+      </body>
     </html>
   );
 }
