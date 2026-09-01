@@ -26,7 +26,10 @@ export async function POST(request) {
     rangeStartUtc: now.toISO(),
     rangeEndUtc: now.plus({ days: 14 }).toISO(),
   });
-  const requested = Interval.fromDateTimes(DateTime.fromISO(startUtc), DateTime.fromISO(endUtc));
+  const requested = Interval.fromDateTimes(
+    DateTime.fromISO(startUtc, { zone: "utc" }),
+    DateTime.fromISO(endUtc, { zone: "utc" })
+  );
   const stillAvailable = freshSlots.some(
     (s) => s.startUtc === requested.start.toISO() && s.endUtc === requested.end.toISO()
   );
