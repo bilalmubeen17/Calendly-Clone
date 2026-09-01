@@ -42,7 +42,7 @@ button {
 }
 
 .site-header {
-  background: var(--teal-dark);
+  background: #000000;
 }
 
 .site-header .brand {
