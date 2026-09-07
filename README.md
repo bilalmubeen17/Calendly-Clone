@@ -19,8 +19,19 @@ can book straight onto it (in their own timezone).
   auto-detected and used purely for display — they can also switch it
   manually.
 - **Booking**: when a visitor confirms a time, we call `events.insert` on the
-  owner's calendar with the visitor as an attendee. Google emails them both a
-  real calendar invite automatically.
+  owner's calendar with the visitor as an attendee and a Google Meet link
+  attached. Google emails the visitor a real calendar invite automatically —
+  it does not email the owner, since they're the event's organizer, so we
+  send that notification ourselves (see below).
+- **Owner notification**: right after booking, we email the owner (via the
+  Gmail API, sending as themselves) with the booking details and a link to
+  `/bookings/[id]/respond`. The booking is already confirmed on the calendar
+  at this point — that page lets them **Confirm** (just acknowledges it),
+  **Decline** (cancels the calendar event and notifies the visitor), or
+  **Propose a new time** (patches the event to a different open slot and
+  notifies the visitor of the change). The link is single-use, authorized by
+  a random token stored on the booking rather than a login, since the owner
+  is clicking from their inbox.
 
 ## 1. Google Cloud Console setup
 
@@ -29,14 +40,20 @@ Google Calendar on their behalf.
 
 1. Go to https://console.cloud.google.com/ and create a new project (or pick
    an existing one).
-2. **Enable the API**: in the sidebar, go to *APIs & Services → Library*,
-   search "Google Calendar API", and click **Enable**.
+2. **Enable the APIs**: in the sidebar, go to *APIs & Services → Library*,
+   search "Google Calendar API" and click **Enable**, then do the same for
+   "Gmail API" (used to email the owner when someone books).
 3. **Configure the consent screen**: *APIs & Services → OAuth consent screen*.
    - User type: "External" (unless you're on Google Workspace and only your
      org will use this).
    - Fill in app name, support email, developer email.
    - Scopes: add `.../auth/calendar.events`, `.../auth/calendar.readonly`,
-     and the default `userinfo.email` / `userinfo.profile`.
+     `.../auth/gmail.send`, and the default `userinfo.email` /
+     `userinfo.profile`.
+   - Anyone who connected before `gmail.send` was added needs to reconnect —
+     visit `/api/auth/google` again (the "Connect Google Calendar" link) to
+     re-consent, since Google only grants a scope once the user has agreed
+     to it.
    - While in "Testing" mode, add the Google accounts you'll test with under
      **Test users** — Google blocks untested accounts otherwise. You'll need
      to submit for verification before arbitrary businesses can connect their

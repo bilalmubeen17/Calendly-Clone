@@ -4,6 +4,7 @@ import { DateTime, Interval } from "luxon";
 import { getUserBySlug, createBooking } from "@/lib/db";
 import { getCalendarClient } from "@/lib/google";
 import { getAvailableSlots } from "@/lib/availability";
+import { notifyOwnerOfBooking } from "@/lib/notify";
 
 export async function POST(request) {
   const body = await request.json();
@@ -43,16 +44,25 @@ export async function POST(request) {
   const { data: event } = await calendar.events.insert({
     calendarId: "primary",
     sendUpdates: "all", // emails the invitee an actual calendar invite
+    conferenceDataVersion: 1, // required for Google to honor conferenceData below
     requestBody: {
       summary: `${name} <> ${user.name || "Meeting"}`,
       description: `Booked via scheduling link by ${name} (${email}).`,
       start: { dateTime: startUtc },
       end: { dateTime: endUtc },
       attendees: [{ email }],
+      conferenceData: {
+        createRequest: {
+          requestId: nanoid(12),
+          conferenceSolutionKey: { type: "hangoutsMeet" },
+        },
+      },
     },
   });
 
   const bookingId = nanoid(12);
+  const meetLink = event.hangoutLink || null;
+  const actionToken = nanoid(24);
   await createBooking({
     id: bookingId,
     user_id: user.id,
@@ -61,7 +71,23 @@ export async function POST(request) {
     end_utc: endUtc,
     invitee_name: name,
     invitee_email: email,
+    meet_link: meetLink,
+    status: "pending",
+    action_token: actionToken,
   });
 
-  return NextResponse.json({ ok: true, bookingId });
+  await notifyOwnerOfBooking({
+    user,
+    booking: {
+      id: bookingId,
+      start_utc: startUtc,
+      end_utc: endUtc,
+      invitee_name: name,
+      invitee_email: email,
+      meet_link: meetLink,
+      action_token: actionToken,
+    },
+  });
+
+  return NextResponse.json({ ok: true, bookingId, meetLink });
 }

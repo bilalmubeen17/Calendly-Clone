@@ -1,30 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-
-function groupByDay(slots, timeZone) {
-  const groups = new Map();
-  for (const slot of slots) {
-    const d = new Date(slot.startUtc);
-    const dayKey = new Intl.DateTimeFormat("en-US", {
-      timeZone,
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    }).format(d);
-    if (!groups.has(dayKey)) groups.set(dayKey, []);
-    groups.get(dayKey).push(slot);
-  }
-  return groups;
-}
-
-function formatTime(iso, timeZone) {
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(iso));
-}
+import { groupByDay, formatTime } from "@/lib/slots";
 
 export default function BookingPage({ params }) {
   const { slug } = params;
@@ -34,6 +11,7 @@ export default function BookingPage({ params }) {
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({ name: "", email: "" });
   const [status, setStatus] = useState("idle"); // idle | submitting | done | error
+  const [meetLink, setMeetLink] = useState(null);
 
   useEffect(() => {
     setVisitorTz(Intl.DateTimeFormat().resolvedOptions().timeZone);
@@ -78,6 +56,7 @@ export default function BookingPage({ params }) {
         }
         return;
       }
+      setMeetLink(json.meetLink);
       setStatus("done");
     } catch {
       setStatus("error");
@@ -110,6 +89,13 @@ export default function BookingPage({ params }) {
         <p style={{ color: "var(--muted)" }}>
           A calendar invite is on its way to {form.email}.
         </p>
+        {meetLink && (
+          <div className="link-box" style={{ marginTop: 16 }}>
+            <a href={meetLink} target="_blank" rel="noreferrer">
+              {meetLink}
+            </a>
+          </div>
+        )}
       </main>
     );
   }
