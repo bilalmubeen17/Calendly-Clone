@@ -11,7 +11,11 @@ export default async function Dashboard() {
   const user = await getUserById(uid);
   if (!user) redirect("/");
 
-  const origin = `${headers().get("x-forwarded-proto") || "http"}://${headers().get("host")}`;
+  // Prefer the configured public domain so the shared link is stable no
+  // matter which hostname (e.g. the *.vercel.app alias) the owner landed on.
+  const origin =
+    process.env.APP_URL?.replace(/\/$/, "") ||
+    `${headers().get("x-forwarded-proto") || "http"}://${headers().get("host")}`;
   const bookingUrl = `${origin}/book/${user.slug}`;
 
   return (
