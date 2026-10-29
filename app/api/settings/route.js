@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { updateUserSettings } from "@/lib/db";
+import { getSessionUserId } from "@/lib/session";
 
 function isValidTimezone(tz) {
   try {
@@ -12,19 +12,19 @@ function isValidTimezone(tz) {
 }
 
 export async function PATCH(request) {
-  const uid = cookies().get("schedlink_uid")?.value;
+  const uid = getSessionUserId();
   if (!uid) {
     return NextResponse.json({ error: "not_authenticated" }, { status: 401 });
   }
 
-  const body = await request.json();
+  const body = await request.json().catch(() => ({}));
   const timezone = body.timezone;
   const dayStartHour = Number(body.day_start_hour);
   const dayEndHour = Number(body.day_end_hour);
   const meetingDurationMinutes = Number(body.meeting_duration_minutes);
   const bufferMinutes = Number(body.buffer_minutes);
 
-  if (!isValidTimezone(timezone)) {
+  if (typeof timezone !== "string" || !isValidTimezone(timezone)) {
     return NextResponse.json({ error: "invalid_timezone" }, { status: 400 });
   }
   if (

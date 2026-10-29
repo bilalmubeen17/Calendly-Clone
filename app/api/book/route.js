@@ -7,11 +7,16 @@ import { getAvailableSlots } from "@/lib/availability";
 import { notifyOwnerOfBooking } from "@/lib/notify";
 
 export async function POST(request) {
-  const body = await request.json();
-  const { slug, startUtc, endUtc, name, email } = body;
+  const body = await request.json().catch(() => ({}));
+  const { slug, startUtc, endUtc } = body;
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  const email = typeof body.email === "string" ? body.email.trim() : "";
 
   if (!slug || !startUtc || !endUtc || !name || !email) {
     return NextResponse.json({ error: "missing_fields" }, { status: 400 });
+  }
+  if (name.length > 100 || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return NextResponse.json({ error: "invalid_fields" }, { status: 400 });
   }
 
   const user = await getUserBySlug(slug);
@@ -19,6 +24,15 @@ export async function POST(request) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
 
+  try {
+    return await book({ request, user, startUtc, endUtc, name, email });
+  } catch (err) {
+    console.error("booking_failed", err);
+    return NextResponse.json({ error: "booking_failed" }, { status: 500 });
+  }
+}
+
+async function book({ request, user, startUtc, endUtc, name, email }) {
   // Re-check the slot is still free right before booking — someone else may
   // have taken it between the visitor loading the page and clicking confirm.
   const now = DateTime.utc();
@@ -87,6 +101,7 @@ export async function POST(request) {
       meet_link: meetLink,
       action_token: actionToken,
     },
+    appUrl: process.env.APP_URL?.replace(/\/$/, "") || new URL(request.url).origin,
   });
 
   return NextResponse.json({ ok: true, bookingId, meetLink });

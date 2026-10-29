@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { groupByDay, formatTime } from "@/lib/slots";
+import { groupByDay, formatDay, formatTime } from "@/lib/slots";
 
 export default function BookingPage({ params }) {
   const { slug } = params;
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const [detectedTz, setDetectedTz] = useState("UTC");
   const [visitorTz, setVisitorTz] = useState("UTC");
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({ name: "", email: "" });
@@ -14,17 +15,24 @@ export default function BookingPage({ params }) {
   const [meetLink, setMeetLink] = useState(null);
 
   useEffect(() => {
-    setVisitorTz(Intl.DateTimeFormat().resolvedOptions().timeZone);
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    setDetectedTz(tz);
+    setVisitorTz(tz);
   }, []);
 
-  useEffect(() => {
-    fetch(`/api/availability/${slug}`)
+  function loadAvailability() {
+    return fetch(`/api/availability/${slug}`)
       .then((r) => r.json())
       .then((json) => {
         if (json.error) setError(json.error);
         else setData(json);
       })
       .catch(() => setError("network"));
+  }
+
+  useEffect(() => {
+    loadAvailability();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 
   const grouped = useMemo(() => {
@@ -51,6 +59,8 @@ export default function BookingPage({ params }) {
       if (!res.ok) {
         if (json.error === "slot_taken") {
           setStatus("taken");
+        } else if (json.error === "invalid_fields") {
+          setStatus("invalid");
         } else {
           setStatus("error");
         }
@@ -87,7 +97,9 @@ export default function BookingPage({ params }) {
         <div className="eyebrow">Confirmed</div>
         <h1 style={{ fontSize: 28 }}>You&apos;re booked.</h1>
         <p style={{ color: "var(--muted)" }}>
-          A calendar invite is on its way to {form.email}.
+          {formatDay(selected.startUtc, visitorTz)}, {formatTime(selected.startUtc, visitorTz)} –{" "}
+          {formatTime(selected.endUtc, visitorTz)} ({visitorTz}). A calendar invite is on its way to{" "}
+          {form.email}.
         </p>
         {meetLink && (
           <div className="link-box" style={{ marginTop: 16 }}>
@@ -127,9 +139,9 @@ export default function BookingPage({ params }) {
           fontSize: 14,
         }}
       >
-        <option value={visitorTz}>{visitorTz} (detected)</option>
-        {visitorTz !== "UTC" && <option value="UTC">UTC</option>}
-        {visitorTz !== data.ownerTimezone && (
+        <option value={detectedTz}>{detectedTz} (detected)</option>
+        {detectedTz !== "UTC" && <option value="UTC">UTC</option>}
+        {detectedTz !== data.ownerTimezone && data.ownerTimezone !== "UTC" && (
           <option value={data.ownerTimezone}>{data.ownerTimezone} (host&apos;s time)</option>
         )}
       </select>
@@ -162,6 +174,7 @@ export default function BookingPage({ params }) {
         <form onSubmit={submitBooking} className="card fade-in" style={{ maxWidth: 420 }}>
           <p style={{ marginTop: 0, fontSize: 15 }}>
             <strong>
+              {formatDay(selected.startUtc, visitorTz)},{" "}
               {formatTime(selected.startUtc, visitorTz)} – {formatTime(selected.endUtc, visitorTz)}
             </strong>{" "}
             <span style={{ color: "var(--muted)" }}>({visitorTz})</span>
@@ -206,9 +219,7 @@ export default function BookingPage({ params }) {
             onClick={() => {
               setSelected(null);
               setStatus("idle");
-              fetch(`/api/availability/${slug}`)
-                .then((r) => r.json())
-                .then(setData);
+              loadAvailability();
             }}
           >
             Choose another time
@@ -217,7 +228,10 @@ export default function BookingPage({ params }) {
       )}
 
       {status === "error" && (
-        <p style={{ color: "var(--muted)" }}>Something went wrong. Please try again.</p>
+        <p style={{ color: "var(--amber)" }}>Something went wrong. Please try again.</p>
+      )}
+      {status === "invalid" && (
+        <p style={{ color: "var(--amber)" }}>Please check your name and email and try again.</p>
       )}
     </main>
   );

@@ -20,7 +20,13 @@ export default function RespondActions({ bookingId, token, slug, timeZone }) {
       });
       const json = await res.json();
       if (!res.ok) {
-        setLoadError(json.error === "slot_taken" ? "That time just got booked — pick another." : "Something went wrong.");
+        setLoadError(
+          json.error === "slot_taken"
+            ? "That time just got booked — pick another."
+            : json.error === "already_resolved"
+              ? `This booking was already ${json.status}.`
+              : "Something went wrong. Please try again."
+        );
         setMode(wasRescheduling ? "rescheduling" : "idle");
         return;
       }
@@ -38,6 +44,7 @@ export default function RespondActions({ bookingId, token, slug, timeZone }) {
     try {
       const res = await fetch(`/api/availability/${slug}`);
       const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
       setSlots(json.slots || []);
     } catch {
       setLoadError("Couldn't load availability.");
@@ -53,7 +60,7 @@ export default function RespondActions({ bookingId, token, slug, timeZone }) {
     return (
       <div>
         {loadError && <p style={{ color: "var(--amber)", marginBottom: 12 }}>{loadError}</p>}
-        {!slots && <p style={{ color: "var(--muted)", margin: 0 }}>Loading open times…</p>}
+        {!slots && !loadError && <p style={{ color: "var(--muted)", margin: 0 }}>Loading open times…</p>}
         {grouped && (
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             {[...grouped.entries()].map(([day, daySlots]) => (
@@ -77,7 +84,13 @@ export default function RespondActions({ bookingId, token, slug, timeZone }) {
           </div>
         )}
         <div style={{ marginTop: 16 }}>
-          <button className="btn secondary" onClick={() => setMode("idle")}>
+          <button
+            className="btn secondary"
+            onClick={() => {
+              setMode("idle");
+              setLoadError(null);
+            }}
+          >
             Back
           </button>
         </div>
@@ -86,16 +99,19 @@ export default function RespondActions({ bookingId, token, slug, timeZone }) {
   }
 
   return (
-    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-      <button className="btn" onClick={() => act("confirm")} disabled={mode === "submitting"}>
-        Confirm
-      </button>
-      <button className="btn secondary" onClick={startReschedule} disabled={mode === "submitting"}>
-        Propose a new time
-      </button>
-      <button className="btn secondary" onClick={() => act("decline")} disabled={mode === "submitting"}>
-        Decline
-      </button>
+    <div>
+      {loadError && <p style={{ color: "var(--amber)", marginTop: 0, marginBottom: 12 }}>{loadError}</p>}
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <button className="btn" onClick={() => act("confirm")} disabled={mode === "submitting"}>
+          Confirm
+        </button>
+        <button className="btn secondary" onClick={startReschedule} disabled={mode === "submitting"}>
+          Propose a new time
+        </button>
+        <button className="btn secondary" onClick={() => act("decline")} disabled={mode === "submitting"}>
+          Decline
+        </button>
+      </div>
     </div>
   );
 }

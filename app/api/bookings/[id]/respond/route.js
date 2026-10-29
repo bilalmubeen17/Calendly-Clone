@@ -5,17 +5,26 @@ import { getCalendarClient } from "@/lib/google";
 import { getAvailableSlots } from "@/lib/availability";
 
 export async function POST(request, { params }) {
-  const body = await request.json();
+  const body = await request.json().catch(() => ({}));
   const { token, action, startUtc, endUtc } = body;
 
   const booking = await getBookingById(params.id);
-  if (!booking || booking.action_token !== token) {
+  if (!booking || !token || booking.action_token !== token) {
     return NextResponse.json({ error: "invalid_token" }, { status: 403 });
   }
   if (booking.status !== "pending") {
     return NextResponse.json({ error: "already_resolved", status: booking.status }, { status: 409 });
   }
 
+  try {
+    return await respond({ booking, action, startUtc, endUtc });
+  } catch (err) {
+    console.error("booking_response_failed", err);
+    return NextResponse.json({ error: "response_failed" }, { status: 500 });
+  }
+}
+
+async function respond({ booking, action, startUtc, endUtc }) {
   const user = await getUserById(booking.user_id);
   const calendar = getCalendarClient(user.google_refresh_token);
 
@@ -25,11 +34,16 @@ export async function POST(request, { params }) {
   }
 
   if (action === "decline") {
-    await calendar.events.delete({
-      calendarId: "primary",
-      eventId: booking.google_event_id,
-      sendUpdates: "all", // lets the invitee know it's been cancelled
-    });
+    try {
+      await calendar.events.delete({
+        calendarId: "primary",
+        eventId: booking.google_event_id,
+        sendUpdates: "all", // lets the invitee know it's been cancelled
+      });
+    } catch (err) {
+      // Already deleted straight from Google Calendar — still mark declined.
+      if (err.code !== 404 && err.code !== 410) throw err;
+    }
     const updated = await resolveBooking(booking.id, { status: "declined" });
     return NextResponse.json({ ok: true, status: updated.status });
   }

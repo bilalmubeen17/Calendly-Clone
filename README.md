@@ -124,9 +124,9 @@ A few things worth doing before this is public-facing for real businesses:
 - **Verify your OAuth app with Google** (*OAuth consent screen → Publish
   app*) — otherwise only the test users you explicitly listed can connect,
   and everyone else sees an "unverified app" warning.
-- **Sign the session cookie** — right now `schedlink_uid` is just the raw
-  user id. Fine for a first deploy behind HTTPS, but sign or encrypt it
-  (e.g. with `SESSION_SECRET`) before this handles real customer data.
+- **Set `SESSION_SECRET`** — the session cookie is HMAC-signed with it
+  (falling back to `GOOGLE_CLIENT_SECRET` if unset). Changing it signs
+  everyone out.
 - **Handle Google token revocation** — if a user disconnects the app from
   their Google account, calendar calls will start failing with an auth
   error; catch that and prompt them to reconnect.

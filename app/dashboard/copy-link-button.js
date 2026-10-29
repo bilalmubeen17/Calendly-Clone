@@ -9,8 +9,14 @@ export default function CopyLinkButton({ url }) {
     <button
       className="btn secondary"
       onClick={async () => {
-        await navigator.clipboard.writeText(url);
-        setCopied(true);
+        try {
+          await navigator.clipboard.writeText(url);
+          setCopied(true);
+        } catch {
+          // Clipboard can be blocked (permissions, non-HTTPS); fall back to a prompt.
+          window.prompt("Copy your booking link:", url);
+          return;
+        }
         setTimeout(() => setCopied(false), 1800);
       }}
     >
